@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dónde comemos 🍽️</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #FAF7F2;
+    --warm: #F5EDE0;
+    --sand: #E8D5BE;
+    --terracota: #C8553D;
+    --terracota-light: #E8775F;
+    --green: #4A7C59;
+    --green-light: #6BA07A;
+    --text: #2C2416;
+    --text-muted: #7A6A55;
+    --card: #FFFFFF;
+    --border: #E0D4C0;
+    --alejandro: #3B72A8;
+    --alejandro-light: #EBF2FA;
+    --alba: #C8553D;
+    --alba-light: #FAEDE9;
+    --both: #6B4FA0;
+    --both-light: #F0EBF8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ===== SPLASH SCREEN ===== */
+  #splash {
+    position: fixed; inset: 0;
+    background: var(--cream);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 1000;
+    padding: 40px 20px;
+  }
+  .splash-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 8vw, 52px);
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 8px;
+    line-height: 1.1;
+  }
+  .splash-subtitle {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-bottom: 56px;
+    text-align: center;
+  }
+  .profile-grid {
+    display: flex; gap: 24px; flex-wrap: wrap; justify-content: center;
+  }
+  .profile-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 14px; padding: 32px 40px;
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    min-width: 160px;
+    text-decoration: none;
+  }
+  .profile-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.1);
+  }
+  .profile-btn.ale:hover { border-color: var(--alejandro); }
+  .profile-btn.alba:hover { border-color: var(--alba); }
+  .profile-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+  }
+  .profile-btn.ale .profile-avatar { background: var(--alejandro-light); }
+  .profile-btn.alba .profile-avatar { background: var(--alba-light); }
+  .profile-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px; font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ===== MAIN APP ===== */
+  #app { display: none; min-height: 100vh; }
+
+  /* Header */
+  .app-header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-inner {
+    max-width: 700px; margin: 0 auto;
+    display: flex; align-items: center;
+    gap: 16px; height: 60px;
+  }
+  .header-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px; font-weight: 700;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .user-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px 5px 8px;
+    border-radius: 20px;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .user-pill.ale { background: var(--alejandro-light); color: var(--alejandro); border-color: var(--alejandro); }
+  .user-pill.alba { background: var(--alba-light); color: var(--alba); border-color: var(--alba); }
+
+  /* Nav */
+  .app-nav {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .nav-inner {
+    max-width: 700px; margin: 0 auto;
+    display: flex; gap: 0;
+  }
+  .nav-btn {
+    padding: 12px 18px;
+    background: none; border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 400;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .nav-btn.active { color: var(--terracota); border-bottom-color: var(--terracota); font-weight: 500; }
+  .nav-btn:hover:not(.active) { color: var(--text); }
+
+  /* Content */
+  .content { max-width: 700px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  /* Category section */
+  .category-section { margin-bottom: 32px; }
+  .category-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .category-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px; font-weight: 600;
+    color: var(--text);
+  }
+  .category-count {
+    font-size: 11px; color: var(--text-muted);
+    background: var(--warm);
+    padding: 2px 8px; border-radius: 10px;
+  }
+
+  /* Restaurant card */
+  .restaurant-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .restaurant-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-1px); }
+  .restaurant-card.visited { background: var(--warm); }
+  .restaurant-card.pending { background: var(--card); }
+
+  .card-emoji { font-size: 22px; flex-shrink: 0; }
+  .card-body { flex: 1; min-width: 0; }
+  .card-name { font-weight: 500; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .card-badges { display: flex; gap: 5px; flex-shrink: 0; align-items: center; }
+
+  .badge {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge.ale { background: var(--alejandro-light); color: var(--alejandro); }
+  .badge.alba { background: var(--alba-light); color: var(--alba); }
+  .badge.empty { background: var(--warm); color: var(--text-muted); opacity: 0.4; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 500;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--card);
+    border-radius: 24px 24px 0 0;
+    width: 100%; max-width: 700px;
+    padding: 28px 24px 48px;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px; font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .modal-category { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+  .modal-section { margin-bottom: 20px; }
+  .modal-section-title { font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+
+  .visit-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+  }
+  .visit-row.ale { background: var(--alejandro-light); }
+  .visit-row.alba { background: var(--alba-light); }
+  .visit-row.pending-row { background: var(--warm); }
+  .visit-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .visit-row.ale .visit-avatar { background: #fff; }
+  .visit-row.alba .visit-avatar { background: #fff; }
+  .visit-info { flex: 1; }
+  .visit-name { font-weight: 500; font-size: 14px; }
+  .visit-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .mark-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all 0.2s;
+  }
+  .mark-btn.ale { background: var(--alejandro-light); color: var(--alejandro); border-color: var(--alejandro); }
+  .mark-btn.ale:hover { background: var(--alejandro); color: #fff; }
+  .mark-btn.alba { background: var(--alba-light); color: var(--alba); border-color: var(--alba); }
+  .mark-btn.alba:hover { background: var(--alba); color: #fff; }
+  .mark-btn.visited-btn { background: var(--warm); color: var(--text-muted); border-color: var(--border); font-size: 11px; }
+
+  /* Add restaurant form */
+  .form-field { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+  .form-input, .form-select {
+    width: 100%; padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; color: var(--text);
+    background: var(--cream);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--terracota); }
+  .submit-btn {
+    width: 100%; padding: 14px;
+    background: var(--terracota); color: #fff;
+    border: none; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .submit-btn:hover { background: var(--terracota-light); }
+
+  /* Pending section */
+  .pending-hero {
+    background: var(--warm);
+    border-radius: 16px; padding: 20px;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+  .pending-hero-emoji { font-size: 36px; margin-bottom: 8px; }
+  .pending-hero-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; }
+  .pending-hero-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--text); color: #fff;
+    padding: 10px 20px; border-radius: 20px;
+    font-size: 13px;
+    z-index: 2000;
+    transition: transform 0.3s ease;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 480px) {
+    .profile-btn { padding: 24px 28px; min-width: 140px; }
+    .content { padding: 16px 12px 80px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <p style="font-size:36px; margin-bottom:12px">🍽️</p>
+  <h1 class="splash-title">¿Dónde comemos?</h1>
+  <p class="splash-subtitle">¿Quién eres tú?</p>
+  <div class="profile-grid">
+    <div class="profile-btn ale" onclick="selectUser('alejandro')">
+      <div class="profile-avatar">👨</div>
+      <span class="profile-name">Alejandro</span>
+    </div>
+    <div class="profile-btn alba" onclick="selectUser('alba')">
+      <div class="profile-avatar">👩</div>
+      <span class="profile-name">Alba Luna</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <header class="app-header">
+    <div class="header-inner">
+      <span class="header-logo">🍽️ ¿Dónde comemos?</span>
+      <div id="userPill" class="user-pill" onclick="logout()">
+        <span id="userEmoji">👤</span>
+        <span id="userName">–</span>
+      </div>
+    </div>
+  </header>
+  <nav class="app-nav">
+    <div class="nav-inner">
+      <button class="nav-btn active" onclick="showTab('list')">Lista</button>
+      <button class="nav-btn" onclick="showTab('pending')">¿Dónde podemos comer?</button>
+      <button class="nav-btn" onclick="showTab('add')">+ Añadir</button>
+    </div>
+  </nav>
+  <main class="content">
+    <div id="tabList"><div class="loading">Cargando...</div></div>
+    <div id="tabPending" style="display:none"></div>
+    <div id="tabAdd" style="display:none">
+      <h2 style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:20px">Añadir restaurante</h2>
+      <div class="form-field">
+        <label class="form-label">Nombre del restaurante</label>
+        <input class="form-input" id="addName" placeholder="Ej: Casa Pepe" autocomplete="off">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Categoría</label>
+        <select class="form-select" id="addCategory">
+          <option value="Asiático">🍣 Asiático</option>
+          <option value="Vegetariano">🥦 Vegetariano</option>
+          <option value="Mexicano">🌮 Mexicano</option>
+          <option value="Hamburgueserías">🍔 Hamburgueserías</option>
+          <option value="Italianos">🍕 Italianos</option>
+          <option value="Bocatas">🥪 Bocatas</option>
+          <option value="Vermut">🥂 Vermut</option>
+          <option value="Restaurantes">🍽️ Restaurantes</option>
+          <option value="Cafeterías">☕ Cafeterías</option>
+          <option value="Cócteles">🍹 Cócteles</option>
+          <option value="Terrazas">🌴 Terrazas</option>
+          <option value="Helados">🍦 Helados</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Ubicación (opcional)</label>
+        <input class="form-input" id="addLocation" placeholder="Ej: C/Gran Vía 12, Zaragoza" autocomplete="off">
+      </div>
+      <button class="submit-btn" onclick="addRestaurant()">Añadir restaurante</button>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// =============================================
+// CONFIGURACIÓN — CAMBIA ESTOS DOS VALORES
+// =============================================
+const BIN_ID = "69ea50d336566621a8e46cbd";
+const API_KEY = "$2a$10$j260/Dp2wEvneArmbKCH2.zN821dSnuUzGbtW2iO8pZp5MIZvTica";
+// =============================================
+
+const BASE_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+const HEADERS = {
+  'Content-Type': 'application/json',
+  'X-Master-Key': API_KEY,
+  'X-Bin-Versioning': 'false'
+};
+
+let currentUser = null;
+let restaurants = [];
+
+// ---- INITIAL DATA ----
+const INITIAL_RESTAURANTS = [
+  // Asiático
+  {id:'r001',name:'Udon',category:'Asiático',emoji:'🍣',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r002',name:'Miss Sushi',category:'Asiático',emoji:'🍣',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r003',name:'Chok Noodles',category:'Asiático',emoji:'🍣',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r004',name:'Kung Fu Noodles',category:'Asiático',emoji:'🍣',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r005',name:'Sibuya Urban',category:'Asiático',emoji:'🍣',location:'C/San Clemente',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r006',name:'Sushi Yumi',category:'Asiático',emoji:'🍣',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r007',name:'Sushiko',category:'Asiático',emoji:'🍣',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r008',name:'Ginger Fizz',category:'Asiático',emoji:'🍣',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r009',name:'Ramen Ronin',category:'Asiático',emoji:'🍜',location:'La Magdalena',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r010',name:'Shifu Ramen',category:'Asiático',emoji:'🍜',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r011',name:'Senbazuru Ramen Bar',category:'Asiático',emoji:'🍜',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Vegetariano
+  {id:'r012',name:'Baobab',category:'Vegetariano',emoji:'🥦',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r013',name:'Birosta',category:'Vegetariano',emoji:'🥦',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r014',name:'Los Helechos',category:'Vegetariano',emoji:'🥦',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r015',name:'Flama',category:'Vegetariano',emoji:'🥦',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r016',name:'La Piparra',category:'Vegetariano',emoji:'🥦',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r017',name:'La Retama',category:'Vegetariano',emoji:'🥦',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r018',name:'Barrio Sur',category:'Vegetariano',emoji:'🥦',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r019',name:'La Olla Vegetal',category:'Vegetariano',emoji:'🥦',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r020',name:'La Feria',category:'Vegetariano',emoji:'🧆',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r021',name:'El Dumbo',category:'Vegetariano',emoji:'🧆',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Mexicano
+  {id:'r022',name:'Jalos',category:'Mexicano',emoji:'🌮',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r023',name:'La Quebradora',category:'Mexicano',emoji:'🌮',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r024',name:'La Salma',category:'Mexicano',emoji:'🌮',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r025',name:'Distrito México',category:'Mexicano',emoji:'🌮',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r026',name:'Gastro Guardabarranco',category:'Mexicano',emoji:'🌮',location:'Nicaragua',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r027',name:'Molarepa',category:'Mexicano',emoji:'🌮',location:'Venezolano',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Hamburgueserías
+  {id:'r028',name:'Goiko',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r029',name:'Hype',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r030',name:'Tik Tak',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r031',name:'23 Burguer',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r032',name:'Mostaza',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r033',name:'The Fitzgerald',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r034',name:'Cebrian',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r035',name:'Madison',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r036',name:'Bronson',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r037',name:'Ham Fresh Burguer',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r038',name:'B de Burguer',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r039',name:'Nostra',category:'Hamburgueserías',emoji:'🍔',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Italianos
+  {id:'r040',name:'Pizzeria da Claudio',category:'Italianos',emoji:'🍕',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r041',name:'La Parthenope',category:'Italianos',emoji:'🍕',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r042',name:'Grosso Napoletano',category:'Italianos',emoji:'🍕',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r043',name:'La Bella Sicilia',category:'Italianos',emoji:'🍕',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r044',name:'Leone',category:'Italianos',emoji:'🍕',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r045',name:'Ditaly',category:'Italianos',emoji:'🍕',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r046',name:'Casa Nostra',category:'Italianos',emoji:'🍕',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r047',name:'Salvatore',category:'Italianos',emoji:'🍕',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r048',name:'Da Francesco',category:'Italianos',emoji:'🍕',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r049',name:'Insólito',category:'Italianos',emoji:'🍕',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r050',name:'Il Principale',category:'Italianos',emoji:'🍝',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r051',name:'Tagliatella',category:'Italianos',emoji:'🍝',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r052',name:'Ragazzo',category:'Italianos',emoji:'🍝',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r053',name:'La Mafia',category:'Italianos',emoji:'🍝',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Bocatas
+  {id:'r054',name:'Bog Bar',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r055',name:'Mott',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r056',name:'Laurel',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r057',name:'Matarraña',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r058',name:'De Jorge',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r059',name:'La Antilla',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r060',name:'La Piedra 64',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r061',name:'Bocateria Ba Bax',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r062',name:'Singularis',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r063',name:'La Posada del Jugón',category:'Bocatas',emoji:'🥪',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r064',name:'La Cordobesa',category:'Bocatas',emoji:'🥔',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Vermut
+  {id:'r065',name:'Vodevil Bungalobar',category:'Vermut',emoji:'🥂',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r066',name:'El Circo',category:'Vermut',emoji:'🥂',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r067',name:'Doña Casta',category:'Vermut',emoji:'🥂',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r068',name:'El Truco',category:'Vermut',emoji:'🥂',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r069',name:'La Gasca',category:'Vermut',emoji:'🥂',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r070',name:'Via Universitas',category:'Vermut',emoji:'🥂',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r071',name:'Via Única',category:'Vermut',emoji:'🥂',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r072',name:'Café Chicago',category:'Vermut',emoji:'🥂',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r073',name:'Garbo',category:'Vermut',emoji:'🥂',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r074',name:'Zeppelin',category:'Vermut',emoji:'🥂',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r075',name:'El Rincón de Baro',category:'Vermut',emoji:'🥂',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r076',name:'Bar El Amanecer',category:'Vermut',emoji:'🥂',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r077',name:'Vía Augusta',category:'Vermut',emoji:'🥂',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Restaurantes
+  {id:'r078',name:'Mai Tai Exótico',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r079',name:'Tribu Restaurante',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r080',name:'Frida Tasty Room',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r081',name:'La Bocca',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r082',name:'La Bombonera',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r083',name:'Nómada',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r084',name:'La Marula',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r085',name:'Pájaros en la Cabeza',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r086',name:'Bunker Bar',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r087',name:'Garbo',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r088',name:'Smooth',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r089',name:'La Republicana',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r090',name:'Gonzo Bitter Bar',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r091',name:'Saona',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r092',name:'Voltereta',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r093',name:'Cedros',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r094',name:'La Flor de Lis',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:true,visitedAlejandro:true,dateAlba:'',dateAlejandro:''},
+  {id:'r095',name:'El Viejo Negroni',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r096',name:'Basho',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r097',name:'Designio',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r098',name:'Monumental',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r099',name:'Albarracín',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r100',name:'El 14',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r101',name:'Atípico',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r102',name:'Café del Tibet',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r103',name:'Wenceslao',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r104',name:'El Taburete',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r105',name:'De Rechupete',category:'Restaurantes',emoji:'🍽️',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Cafeterías
+  {id:'r106',name:'Doña Hipólita',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r107',name:'Café Botánico',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r108',name:'Veintiuno Café',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r109',name:'Chevere',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r110',name:'Creperie Flor',category:'Cafeterías',emoji:'🥐',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r111',name:'Blummfit',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r112',name:'Justicia Café',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r113',name:'Le Coco Café',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r114',name:'Elio and Coco',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r115',name:'La Clandestina',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r116',name:'Mi Habitación Favorita',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r117',name:'Momo',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r118',name:'Dídola Café',category:'Cafeterías',emoji:'🍰',location:'librería',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r119',name:'La Cocina de Keyla',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r120',name:'Nati Natillas',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r121',name:'Matisse Rivera Café',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r122',name:'Ginger & Mint',category:'Cafeterías',emoji:'🍰',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r123',name:"Puffin's Kitchen",category:'Cafeterías',emoji:'🥞',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Cócteles
+  {id:'r124',name:'Bloody',category:'Cócteles',emoji:'🍹',location:'C/San Miguel',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r125',name:'Calling Room',category:'Cócteles',emoji:'🍹',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r126',name:'Chilimango',category:'Cócteles',emoji:'🍹',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r127',name:'El Loco Yibril',category:'Cócteles',emoji:'🍹',location:'La Magdalena',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r128',name:'El Federal',category:'Cócteles',emoji:'🍹',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r129',name:'Momoa',category:'Cócteles',emoji:'🍹',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r130',name:'Moonlight Experimental Bar',category:'Cócteles',emoji:'🍹',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r131',name:'Macoa',category:'Cócteles',emoji:'🍹',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r132',name:'Umalas',category:'Cócteles',emoji:'🍹',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r133',name:'Boulevardier Café',category:'Cócteles',emoji:'🍹',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r134',name:'Lateral (Azotea)',category:'Cócteles',emoji:'🍹',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r135',name:'Lounge Club Van Gogh',category:'Cócteles',emoji:'🍹',location:'Los Girasoles',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Terrazas
+  {id:'r136',name:'La Terraza',category:'Terrazas',emoji:'🌴',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r137',name:'Las Ocas',category:'Terrazas',emoji:'🌴',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r138',name:'Terraza Libertad 6.8',category:'Terrazas',emoji:'🌴',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r139',name:'Quiosco del Bruil',category:'Terrazas',emoji:'🌴',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r140',name:'La Junquera',category:'Terrazas',emoji:'🌴',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r141',name:'La Milonga',category:'Terrazas',emoji:'🌴',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  // Helados
+  {id:'r142',name:'Ferrara',category:'Helados',emoji:'🍦',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r143',name:'Heladería Tortosa',category:'Helados',emoji:'🍦',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r144',name:'Loco Polo',category:'Helados',emoji:'🍦',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r145',name:'Helados Italianos',category:'Helados',emoji:'🍦',location:'',visitedAlba:true,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r146',name:'Presco',category:'Helados',emoji:'🍦',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r147',name:'Aldo',category:'Helados',emoji:'🍦',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+  {id:'r148',name:'Il Carrettino',category:'Helados',emoji:'🍦',location:'',visitedAlba:false,visitedAlejandro:false,dateAlba:'',dateAlejandro:''},
+];
+
+const CATEGORIES_ORDER = ['Asiático','Vegetariano','Mexicano','Hamburgueserías','Italianos','Bocatas','Vermut','Restaurantes','Cafeterías','Cócteles','Terrazas','Helados'];
+const CATEGORY_EMOJI = {
+  'Asiático':'🍣','Vegetariano':'🥦','Mexicano':'🌮','Hamburgueserías':'🍔',
+  'Italianos':'🍕','Bocatas':'🥪','Vermut':'🥂','Restaurantes':'🍽️',
+  'Cafeterías':'☕','Cócteles':'🍹','Terrazas':'🌴','Helados':'🍦'
+};
+
+// ---- USER ----
+function selectUser(user) {
+  currentUser = user;
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  const pill = document.getElementById('userPill');
+  pill.className = 'user-pill ' + (user === 'alejandro' ? 'ale' : 'alba');
+  document.getElementById('userEmoji').textContent = user === 'alejandro' ? '👨' : '👩';
+  document.getElementById('userName').textContent = user === 'alejandro' ? 'Alejandro' : 'Alba Luna';
+  loadData();
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('splash').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ---- DATA ----
+async function loadData() {
+  try {
+    const res = await fetch(BASE_URL + '/latest', { headers: { 'X-Master-Key': API_KEY } });
+    const json = await res.json();
+    const saved = json.record.restaurants || [];
+    if (saved.length === 0) {
+      restaurants = INITIAL_RESTAURANTS.map(r => ({...r}));
+      await saveData();
+    } else {
+      // Merge: keep saved data but add any new restaurant from INITIAL_RESTAURANTS
+      const savedIds = new Set(saved.map(r => r.id));
+      const merged = [...saved];
+      for (const init of INITIAL_RESTAURANTS) {
+        if (!savedIds.has(init.id)) merged.push({...init});
+      }
+      restaurants = merged;
+    }
+  } catch(e) {
+    restaurants = INITIAL_RESTAURANTS.map(r => ({...r}));
+  }
+  renderList();
+  renderPending();
+}
+
+async function saveData() {
+  try {
+    await fetch(BASE_URL, {
+      method: 'PUT',
+      headers: HEADERS,
+      body: JSON.stringify({ restaurants })
+    });
+  } catch(e) { showToast('Error al guardar 😞'); }
+}
+
+// ---- TABS ----
+function showTab(tab) {
+  ['list','pending','add'].forEach(t => {
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', ['list','pending','add'][i] === tab);
+  });
+}
+
+// ---- RENDER LIST ----
+function renderList() {
+  const container = document.getElementById('tabList');
+  let html = '';
+  for (const cat of CATEGORIES_ORDER) {
+    const items = restaurants.filter(r => r.category === cat);
+    if (!items.length) continue;
+    html += `<div class="category-section">
+      <div class="category-header">
+        <span style="font-size:20px">${CATEGORY_EMOJI[cat]||'🍽️'}</span>
+        <span class="category-label">${cat}</span>
+        <span class="category-count">${items.length}</span>
+      </div>`;
+    for (const r of items) {
+      const aleVisited = r.visitedAlejandro;
+      const albaVisited = r.visitedAlba;
+      const bothVisited = aleVisited && albaVisited;
+      html += `<div class="restaurant-card ${(aleVisited || albaVisited) ? 'visited' : 'pending'}" onclick="openModal('${r.id}')">
+        <span class="card-emoji">${r.emoji}</span>
+        <div class="card-body">
+          <div class="card-name">${r.name}</div>
+          ${r.location ? `<div class="card-meta">📍 ${r.location}</div>` : ''}
+        </div>
+        <div class="card-badges">
+          <div class="badge ${aleVisited ? 'ale' : 'empty'}" title="${aleVisited ? 'Alejandro ha ido' : 'Alejandro no ha ido'}">A</div>
+          <div class="badge ${albaVisited ? 'alba' : 'empty'}" title="${albaVisited ? 'Alba Luna ha ido' : 'Alba Luna no ha ido'}">L</div>
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+// ---- RENDER PENDING ----
+function renderPending() {
+  const container = document.getElementById('tabPending');
+  const pending = restaurants.filter(r => !r.visitedAlba && !r.visitedAlejandro);
+  const byCategory = {};
+  for (const r of pending) {
+    if (!byCategory[r.category]) byCategory[r.category] = [];
+    byCategory[r.category].push(r);
+  }
+  let html = `<div class="pending-hero">
+    <div class="pending-hero-emoji">🗺️</div>
+    <div class="pending-hero-title">¿Dónde podemos comer?</div>
+    <div class="pending-hero-sub">${pending.length} sitios pendientes por descubrir juntos</div>
+  </div>`;
+  for (const cat of CATEGORIES_ORDER) {
+    if (!byCategory[cat]) continue;
+    html += `<div class="category-section">
+      <div class="category-header">
+        <span style="font-size:20px">${CATEGORY_EMOJI[cat]||'🍽️'}</span>
+        <span class="category-label">${cat}</span>
+        <span class="category-count">${byCategory[cat].length}</span>
+      </div>`;
+    for (const r of byCategory[cat]) {
+      html += `<div class="restaurant-card pending" onclick="openModal('${r.id}')">
+        <span class="card-emoji">${r.emoji}</span>
+        <div class="card-body">
+          <div class="card-name">${r.name}</div>
+          ${r.location ? `<div class="card-meta">📍 ${r.location}</div>` : ''}
+        </div>
+        <div class="card-badges">
+          <div class="badge empty">A</div>
+          <div class="badge empty">L</div>
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+// ---- MODAL ----
+function openModal(id) {
+  const r = restaurants.find(x => x.id === id);
+  if (!r) return;
+  const today = new Date().toLocaleDateString('es-ES');
+  let html = `<div class="modal-title">${r.emoji} ${r.name}</div>
+    <div class="modal-category">${r.category}${r.location ? ' · 📍 ' + r.location : ''}</div>`;
+
+  html += `<div class="modal-section">
+    <div class="modal-section-title">¿Quién ha estado?</div>`;
+
+  // Alejandro
+  html += `<div class="visit-row ale">
+    <div class="visit-avatar">👨</div>
+    <div class="visit-info">
+      <div class="visit-name">Alejandro</div>
+      <div class="visit-date">${r.visitedAlejandro ? ('✅ Visitado' + (r.dateAlejandro ? ' · ' + r.dateAlejandro : '')) : '⬜ Pendiente'}</div>
+    </div>`;
+  if (!r.visitedAlejandro) {
+    html += `<button class="mark-btn ale" onclick="markVisit('${id}','alejandro','${today}')">Marcar ✓</button>`;
+  } else {
+    html += `<span class="mark-btn visited-btn">✓ Hecho</span>`;
+  }
+  html += `</div>`;
+
+  // Alba Luna
+  html += `<div class="visit-row alba">
+    <div class="visit-avatar">👩</div>
+    <div class="visit-info">
+      <div class="visit-name">Alba Luna</div>
+      <div class="visit-date">${r.visitedAlba ? ('✅ Visitado' + (r.dateAlba ? ' · ' + r.dateAlba : '')) : '⬜ Pendiente'}</div>
+    </div>`;
+  if (!r.visitedAlba) {
+    html += `<button class="mark-btn alba" onclick="markVisit('${id}','alba','${today}')">Marcar ✓</button>`;
+  } else {
+    html += `<span class="mark-btn visited-btn">✓ Hecho</span>`;
+  }
+  html += `</div></div>`;
+
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+async function markVisit(id, who, date) {
+  const r = restaurants.find(x => x.id === id);
+  if (!r) return;
+  if (who === 'alejandro') { r.visitedAlejandro = true; r.dateAlejandro = date; }
+  if (who === 'alba') { r.visitedAlba = true; r.dateAlba = date; }
+  await saveData();
+  renderList();
+  renderPending();
+  openModal(id);
+  showToast('¡Marcado! 🎉');
+}
+
+// ---- ADD ----
+async function addRestaurant() {
+  const name = document.getElementById('addName').value.trim();
+  const category = document.getElementById('addCategory').value;
+  const location = document.getElementById('addLocation').value.trim();
+  if (!name) { showToast('Escribe el nombre del restaurante'); return; }
+  const emoji = CATEGORY_EMOJI[category] || '🍽️';
+  const id = 'u' + Date.now();
+  restaurants.push({ id, name, category, emoji, location,
+    visitedAlba: false, visitedAlejandro: false, dateAlba: '', dateAlejandro: '' });
+  await saveData();
+  renderList();
+  renderPending();
+  document.getElementById('addName').value = '';
+  document.getElementById('addLocation').value = '';
+  showToast('¡Restaurante añadido! 🍽️');
+  showTab('list');
+}
+
+// ---- TOAST ----
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
