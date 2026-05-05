@@ -452,20 +452,27 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
 // =============================================
-// CONFIGURACIÓN — CAMBIA ESTOS DOS VALORES
+// FIREBASE — configuración
 // =============================================
-const BIN_ID = "69ea50d336566621a8e46cbd";
-const API_KEY = "$2a$10$j260/Dp2wEvneArmbKCH2.zN821dSnuUzGbtW2iO8pZp5MIZvTica";
-// =============================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-const BASE_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const HEADERS = {
-  'Content-Type': 'application/json',
-  'X-Master-Key': API_KEY,
-  'X-Bin-Versioning': 'false'
+const firebaseConfig = {
+  apiKey: "AIzaSyDNFnQGIooTKvCaWUthPTCp4UmUjFSjeW0",
+  authDomain: "restaurantes-10f31.firebaseapp.com",
+  databaseURL: "https://restaurantes-10f31-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "restaurantes-10f31",
+  storageBucket: "restaurantes-10f31.firebasestorage.app",
+  messagingSenderId: "221545660795",
+  appId: "1:221545660795:web:8cf3a39a47905eb95e3dde"
 };
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+const dataRef = ref(db, 'restaurantes');
+// =============================================
 
 let currentUser = null;
 let restaurants = [];
@@ -660,38 +667,60 @@ function logout() {
 }
 
 // ---- DATA ----
-async function loadData() {
-  // Render instantly with local data, then sync from JSONBin
-  restaurants = INITIAL_RESTAURANTS.map(r => ({...r}));
-  renderList();
-  renderPending();
-  try {
-    const res = await fetch(BASE_URL + '/latest', { headers: { 'X-Master-Key': API_KEY } });
-    const json = await res.json();
-    const saved = json.record.restaurants || [];
-    if (saved.length > 0) {
-      const savedIds = new Set(saved.map(r => r.id));
-      const merged = [...saved];
-      for (const init of INITIAL_RESTAURANTS) {
-        if (!savedIds.has(init.id)) merged.push({...init});
-      }
-      restaurants = merged;
-      renderList();
-      renderPending();
-    } else {
-      await saveData();
-    }
-  } catch(e) { /* use local data already rendered */ }
+const LOCAL_KEY = 'dondecomeemos_data';
+
+function mergeWithInitial(saved) {
+  const savedIds = new Set(saved.map(r => r.id));
+  const merged = [...saved];
+  for (const init of INITIAL_RESTAURANTS) {
+    if (!savedIds.has(init.id)) merged.push({...init});
+  }
+  return merged;
 }
 
-async function saveData() {
+function saveLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(restaurants)); } catch(e) {}
+}
+
+function loadLocal() {
   try {
-    await fetch(BASE_URL, {
-      method: 'PUT',
-      headers: HEADERS,
-      body: JSON.stringify({ restaurants })
-    });
-  } catch(e) { showToast('Error al guardar 😞'); }
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+function loadData() {
+  // 1. Mostrar datos locales al instante
+  const cached = loadLocal();
+  restaurants = cached && cached.length > 0
+    ? mergeWithInitial(cached)
+    : INITIAL_RESTAURANTS.map(r => ({...r}));
+  renderAll();
+
+  // 2. Suscribirse a Firebase — se actualiza en tiempo real
+  onValue(dataRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.lista && data.lista.length > 0) {
+      restaurants = mergeWithInitial(data.lista);
+    } else {
+      // Firebase vacío: subir los datos iniciales
+      restaurants = INITIAL_RESTAURANTS.map(r => ({...r}));
+      saveData();
+    }
+    saveLocal();
+    renderAll();
+  }, (error) => {
+    console.warn('Firebase error:', error.message);
+  });
+}
+
+function saveData() {
+  saveLocal();
+  set(dataRef, { lista: restaurants }).catch(e => {
+    console.warn('Error al guardar en Firebase:', e.message);
+    showToast('Error al guardar 😞');
+  });
 }
 
 // ---- TABS ----
@@ -909,16 +938,14 @@ async function markVisit(id, who, date) {
   if (!r) return;
   if (who === 'alejandro') { r.visitedAlejandro = true; r.dateAlejandro = date; }
   if (who === 'alba') { r.visitedAlba = true; r.dateAlba = date; }
-  // Update all UI immediately (optimistic)
   renderAll();
   openModal(id);
   showToast('¡Marcado! 🎉');
-  // Save in background
   saveData();
 }
 
 // ---- ADD ----
-async function addRestaurant() {
+function addRestaurant() {
   const name = document.getElementById('addName').value.trim();
   const category = document.getElementById('addCategory').value;
   const location = document.getElementById('addLocation').value.trim();
@@ -927,7 +954,7 @@ async function addRestaurant() {
   const id = 'u' + Date.now();
   restaurants.push({ id, name, category, emoji, location,
     visitedAlba: false, visitedAlejandro: false, dateAlba: '', dateAlejandro: '' });
-  await saveData();
+  saveData();
   renderAll();
   document.getElementById('addName').value = '';
   document.getElementById('addLocation').value = '';
@@ -942,6 +969,18 @@ function showToast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
+
+// Exponer funciones al HTML (necesario con type="module")
+window.selectUser = selectUser;
+window.logout = logout;
+window.showTab = showTab;
+window.toggleCategory = toggleCategory;
+window.togglePendingSection = togglePendingSection;
+window.openModal = openModal;
+window.closeModalOutside = closeModalOutside;
+window.closeModal = closeModal;
+window.markVisit = markVisit;
+window.addRestaurant = addRestaurant;
 </script>
 </body>
 </html>
