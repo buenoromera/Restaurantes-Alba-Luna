@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -151,37 +152,61 @@
   /* Content */
   .content { max-width: 700px; margin: 0 auto; padding: 20px 16px 80px; }
 
-  /* Category section */
-  .category-section { margin-bottom: 32px; }
+  /* Category accordion */
+  .category-section { margin-bottom: 10px; }
   .category-header {
     display: flex; align-items: center; gap: 10px;
-    margin-bottom: 12px;
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.18s;
+    user-select: none;
   }
+  .category-header:hover { background: var(--warm); }
+  .category-header.open { border-radius: 14px 14px 0 0; border-bottom-color: transparent; }
   .category-label {
     font-family: 'Playfair Display', serif;
-    font-size: 18px; font-weight: 600;
+    font-size: 17px; font-weight: 600;
     color: var(--text);
+    flex: 1;
   }
   .category-count {
     font-size: 11px; color: var(--text-muted);
     background: var(--warm);
     padding: 2px 8px; border-radius: 10px;
   }
+  .category-chevron {
+    font-size: 12px; color: var(--text-muted);
+    transition: transform 0.2s;
+  }
+  .category-header.open .category-chevron { transform: rotate(180deg); }
+  .category-body {
+    display: none;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .category-body.open { display: block; }
 
   /* Restaurant card */
   .restaurant-card {
     background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 14px 16px;
-    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    padding: 13px 16px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.15s;
     display: flex; align-items: center; gap: 14px;
   }
-  .restaurant-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-1px); }
-  .restaurant-card.visited { background: var(--warm); }
-  .restaurant-card.pending { background: var(--card); }
+  .restaurant-card:last-child { border-bottom: none; }
+  .restaurant-card:hover { background: var(--warm) !important; }
+  /* Color states */
+  .restaurant-card.state-none { background: var(--card); }
+  .restaurant-card.state-one  { background: rgba(200, 85, 61, 0.08); }
+  .restaurant-card.state-both { background: rgba(200, 85, 61, 0.22); }
 
   .card-emoji { font-size: 22px; flex-shrink: 0; }
   .card-body { flex: 1; min-width: 0; }
@@ -294,12 +319,19 @@
   .pending-hero {
     background: var(--warm);
     border-radius: 16px; padding: 20px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
     text-align: center;
   }
   .pending-hero-emoji { font-size: 36px; margin-bottom: 8px; }
   .pending-hero-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; }
   .pending-hero-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .pending-section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px; font-weight: 600;
+    margin: 20px 0 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .pending-section-sub { font-size: 12px; color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-weight: 400; margin-left: 4px; }
 
   /* Loading */
   .loading { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
@@ -613,27 +645,27 @@ function logout() {
 
 // ---- DATA ----
 async function loadData() {
+  // Render instantly with local data, then sync from JSONBin
+  restaurants = INITIAL_RESTAURANTS.map(r => ({...r}));
+  renderList();
+  renderPending();
   try {
     const res = await fetch(BASE_URL + '/latest', { headers: { 'X-Master-Key': API_KEY } });
     const json = await res.json();
     const saved = json.record.restaurants || [];
-    if (saved.length === 0) {
-      restaurants = INITIAL_RESTAURANTS.map(r => ({...r}));
-      await saveData();
-    } else {
-      // Merge: keep saved data but add any new restaurant from INITIAL_RESTAURANTS
+    if (saved.length > 0) {
       const savedIds = new Set(saved.map(r => r.id));
       const merged = [...saved];
       for (const init of INITIAL_RESTAURANTS) {
         if (!savedIds.has(init.id)) merged.push({...init});
       }
       restaurants = merged;
+      renderList();
+      renderPending();
+    } else {
+      await saveData();
     }
-  } catch(e) {
-    restaurants = INITIAL_RESTAURANTS.map(r => ({...r}));
-  }
-  renderList();
-  renderPending();
+  } catch(e) { /* use local data already rendered */ }
 }
 
 async function saveData() {
@@ -657,35 +689,50 @@ function showTab(tab) {
 }
 
 // ---- RENDER LIST ----
+const openCategories = new Set();
+
+function toggleCategory(cat) {
+  if (openCategories.has(cat)) openCategories.delete(cat);
+  else openCategories.add(cat);
+  renderList();
+}
+
+function cardState(r) {
+  if (r.visitedAlejandro && r.visitedAlba) return 'state-both';
+  if (r.visitedAlejandro || r.visitedAlba) return 'state-one';
+  return 'state-none';
+}
+
 function renderList() {
   const container = document.getElementById('tabList');
   let html = '';
   for (const cat of CATEGORIES_ORDER) {
     const items = restaurants.filter(r => r.category === cat);
     if (!items.length) continue;
+    const isOpen = openCategories.has(cat);
+    const visitedCount = items.filter(r => r.visitedAlba || r.visitedAlejandro).length;
     html += `<div class="category-section">
-      <div class="category-header">
+      <div class="category-header${isOpen?' open':''}" onclick="toggleCategory('${cat}')">
         <span style="font-size:20px">${CATEGORY_EMOJI[cat]||'🍽️'}</span>
         <span class="category-label">${cat}</span>
-        <span class="category-count">${items.length}</span>
-      </div>`;
+        <span class="category-count">${visitedCount}/${items.length}</span>
+        <span class="category-chevron">▼</span>
+      </div>
+      <div class="category-body${isOpen?' open':''}">`;
     for (const r of items) {
-      const aleVisited = r.visitedAlejandro;
-      const albaVisited = r.visitedAlba;
-      const bothVisited = aleVisited && albaVisited;
-      html += `<div class="restaurant-card ${(aleVisited || albaVisited) ? 'visited' : 'pending'}" onclick="openModal('${r.id}')">
+      html += `<div class="restaurant-card ${cardState(r)}" onclick="openModal('${r.id}')">
         <span class="card-emoji">${r.emoji}</span>
         <div class="card-body">
           <div class="card-name">${r.name}</div>
           ${r.location ? `<div class="card-meta">📍 ${r.location}</div>` : ''}
         </div>
         <div class="card-badges">
-          <div class="badge ${aleVisited ? 'ale' : 'empty'}" title="${aleVisited ? 'Alejandro ha ido' : 'Alejandro no ha ido'}">A</div>
-          <div class="badge ${albaVisited ? 'alba' : 'empty'}" title="${albaVisited ? 'Alba Luna ha ido' : 'Alba Luna no ha ido'}">L</div>
+          <div class="badge ${r.visitedAlejandro ? 'ale' : 'empty'}">A</div>
+          <div class="badge ${r.visitedAlba ? 'alba' : 'empty'}">L</div>
         </div>
       </div>`;
     }
-    html += '</div>';
+    html += `</div></div>`;
   }
   container.innerHTML = html;
 }
@@ -693,40 +740,64 @@ function renderList() {
 // ---- RENDER PENDING ----
 function renderPending() {
   const container = document.getElementById('tabPending');
-  const pending = restaurants.filter(r => !r.visitedAlba && !r.visitedAlejandro);
-  const byCategory = {};
-  for (const r of pending) {
-    if (!byCategory[r.category]) byCategory[r.category] = [];
-    byCategory[r.category].push(r);
+  const other = currentUser === 'alejandro' ? 'alba' : 'alejandro';
+  const otherName = other === 'alejandro' ? 'Alejandro' : 'Alba Luna';
+
+  // Section 1: neither has been
+  const neitherVisited = restaurants.filter(r => !r.visitedAlba && !r.visitedAlejandro);
+  // Section 2: current user visited, other hasn't
+  const onlyCurrentVisited = restaurants.filter(r => {
+    const iVisited = currentUser === 'alejandro' ? r.visitedAlejandro : r.visitedAlba;
+    const otherVisited = currentUser === 'alejandro' ? r.visitedAlba : r.visitedAlejandro;
+    return iVisited && !otherVisited;
+  });
+
+  function buildCardList(list) {
+    if (!list.length) return `<div style="padding:16px;font-size:13px;color:var(--text-muted);text-align:center">¡No hay ninguno en esta categoría!</div>`;
+    const byCategory = {};
+    for (const r of list) {
+      if (!byCategory[r.category]) byCategory[r.category] = [];
+      byCategory[r.category].push(r);
+    }
+    let h = '';
+    for (const cat of CATEGORIES_ORDER) {
+      if (!byCategory[cat]) continue;
+      h += `<div style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--warm);border-radius:10px;margin-bottom:4px">
+          <span style="font-size:16px">${CATEGORY_EMOJI[cat]||'🍽️'}</span>
+          <span style="font-family:'Playfair Display',serif;font-size:15px;font-weight:600">${cat}</span>
+          <span style="font-size:11px;color:var(--text-muted);background:var(--card);padding:1px 7px;border-radius:8px">${byCategory[cat].length}</span>
+        </div>`;
+      for (const r of byCategory[cat]) {
+        h += `<div class="restaurant-card state-none" onclick="openModal('${r.id}')">
+          <span class="card-emoji">${r.emoji}</span>
+          <div class="card-body">
+            <div class="card-name">${r.name}</div>
+            ${r.location ? `<div class="card-meta">📍 ${r.location}</div>` : ''}
+          </div>
+          <div class="card-badges">
+            <div class="badge ${r.visitedAlejandro ? 'ale' : 'empty'}">A</div>
+            <div class="badge ${r.visitedAlba ? 'alba' : 'empty'}">L</div>
+          </div>
+        </div>`;
+      }
+      h += `</div>`;
+    }
+    return h;
   }
+
   let html = `<div class="pending-hero">
     <div class="pending-hero-emoji">🗺️</div>
     <div class="pending-hero-title">¿Dónde podemos comer?</div>
-    <div class="pending-hero-sub">${pending.length} sitios pendientes por descubrir juntos</div>
+    <div class="pending-hero-sub">${neitherVisited.length} sitios por descubrir juntos · ${onlyCurrentVisited.length} que ${otherName} no conoce aún</div>
   </div>`;
-  for (const cat of CATEGORIES_ORDER) {
-    if (!byCategory[cat]) continue;
-    html += `<div class="category-section">
-      <div class="category-header">
-        <span style="font-size:20px">${CATEGORY_EMOJI[cat]||'🍽️'}</span>
-        <span class="category-label">${cat}</span>
-        <span class="category-count">${byCategory[cat].length}</span>
-      </div>`;
-    for (const r of byCategory[cat]) {
-      html += `<div class="restaurant-card pending" onclick="openModal('${r.id}')">
-        <span class="card-emoji">${r.emoji}</span>
-        <div class="card-body">
-          <div class="card-name">${r.name}</div>
-          ${r.location ? `<div class="card-meta">📍 ${r.location}</div>` : ''}
-        </div>
-        <div class="card-badges">
-          <div class="badge empty">A</div>
-          <div class="badge empty">L</div>
-        </div>
-      </div>`;
-    }
-    html += '</div>';
-  }
+
+  html += `<div class="pending-section-title">🌟 Por descubrir <span class="pending-section-sub">${neitherVisited.length} sitios</span></div>`;
+  html += buildCardList(neitherVisited);
+
+  html += `<div class="pending-section-title">👤 ${otherName} no ha ido <span class="pending-section-sub">${onlyCurrentVisited.length} sitios</span></div>`;
+  html += buildCardList(onlyCurrentVisited);
+
   container.innerHTML = html;
 }
 
@@ -786,11 +857,13 @@ async function markVisit(id, who, date) {
   if (!r) return;
   if (who === 'alejandro') { r.visitedAlejandro = true; r.dateAlejandro = date; }
   if (who === 'alba') { r.visitedAlba = true; r.dateAlba = date; }
-  await saveData();
+  // Update UI immediately (optimistic)
   renderList();
   renderPending();
   openModal(id);
   showToast('¡Marcado! 🎉');
+  // Save in background
+  saveData();
 }
 
 // ---- ADD ----
