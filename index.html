@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -325,13 +324,30 @@
   .pending-hero-emoji { font-size: 36px; margin-bottom: 8px; }
   .pending-hero-title { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; }
   .pending-hero-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-  .pending-section-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 18px; font-weight: 600;
-    margin: 20px 0 12px;
-    display: flex; align-items: center; gap: 8px;
+  /* Pending accordion sections */
+  .pending-accordion { margin-bottom: 10px; }
+  .pending-acc-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background 0.18s;
+    user-select: none;
   }
-  .pending-section-sub { font-size: 12px; color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-weight: 400; margin-left: 4px; }
+  .pending-acc-header:hover { background: var(--warm); }
+  .pending-acc-header.open { border-radius: 14px 14px 0 0; border-bottom-color: transparent; }
+  .pending-acc-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; flex: 1; }
+  .pending-acc-count { font-size: 11px; color: var(--text-muted); background: var(--warm); padding: 2px 8px; border-radius: 10px; }
+  .pending-acc-chevron { font-size: 12px; color: var(--text-muted); transition: transform 0.2s; }
+  .pending-acc-header.open .pending-acc-chevron { transform: rotate(180deg); }
+  .pending-acc-body { display: none; border: 1px solid var(--border); border-top: none; border-radius: 0 0 14px 14px; overflow: hidden; margin-bottom: 4px; }
+  .pending-acc-body.open { display: block; }
+  .pending-subcat { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--warm); border-bottom: 1px solid var(--border); }
+  .pending-subcat + .restaurant-card { border-top: none; }
+  .pending-subcat-name { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 600; flex: 1; }
+  .pending-subcat-count { font-size: 11px; color: var(--text-muted); background: var(--card); padding: 1px 7px; border-radius: 8px; }
 
   /* Loading */
   .loading { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
@@ -688,6 +704,12 @@ function showTab(tab) {
   });
 }
 
+// ---- RENDER ALL ----
+function renderAll() {
+  renderList();
+  renderPending();
+}
+
 // ---- RENDER LIST ----
 const openCategories = new Set();
 
@@ -710,12 +732,15 @@ function renderList() {
     const items = restaurants.filter(r => r.category === cat);
     if (!items.length) continue;
     const isOpen = openCategories.has(cat);
-    const visitedCount = items.filter(r => r.visitedAlba || r.visitedAlejandro).length;
+    // Count per current user
+    const userVisited = items.filter(r =>
+      currentUser === 'alejandro' ? r.visitedAlejandro : r.visitedAlba
+    ).length;
     html += `<div class="category-section">
       <div class="category-header${isOpen?' open':''}" onclick="toggleCategory('${cat}')">
         <span style="font-size:20px">${CATEGORY_EMOJI[cat]||'🍽️'}</span>
         <span class="category-label">${cat}</span>
-        <span class="category-count">${visitedCount}/${items.length}</span>
+        <span class="category-count">${userVisited}/${items.length}</span>
         <span class="category-chevron">▼</span>
       </div>
       <div class="category-body${isOpen?' open':''}">`;
@@ -738,22 +763,28 @@ function renderList() {
 }
 
 // ---- RENDER PENDING ----
+const openPendingSections = new Set(['neither']); // open by default
+
+function togglePendingSection(key) {
+  if (openPendingSections.has(key)) openPendingSections.delete(key);
+  else openPendingSections.add(key);
+  renderPending();
+}
+
 function renderPending() {
   const container = document.getElementById('tabPending');
   const other = currentUser === 'alejandro' ? 'alba' : 'alejandro';
   const otherName = other === 'alejandro' ? 'Alejandro' : 'Alba Luna';
 
-  // Section 1: neither has been
   const neitherVisited = restaurants.filter(r => !r.visitedAlba && !r.visitedAlejandro);
-  // Section 2: current user visited, other hasn't
   const onlyCurrentVisited = restaurants.filter(r => {
     const iVisited = currentUser === 'alejandro' ? r.visitedAlejandro : r.visitedAlba;
     const otherVisited = currentUser === 'alejandro' ? r.visitedAlba : r.visitedAlejandro;
     return iVisited && !otherVisited;
   });
 
-  function buildCardList(list) {
-    if (!list.length) return `<div style="padding:16px;font-size:13px;color:var(--text-muted);text-align:center">¡No hay ninguno en esta categoría!</div>`;
+  function buildAccordionBody(list) {
+    if (!list.length) return `<div style="padding:20px;font-size:13px;color:var(--text-muted);text-align:center">¡Todo visitado en esta sección!</div>`;
     const byCategory = {};
     for (const r of list) {
       if (!byCategory[r.category]) byCategory[r.category] = [];
@@ -762,14 +793,13 @@ function renderPending() {
     let h = '';
     for (const cat of CATEGORIES_ORDER) {
       if (!byCategory[cat]) continue;
-      h += `<div style="margin-bottom:10px">
-        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--warm);border-radius:10px;margin-bottom:4px">
-          <span style="font-size:16px">${CATEGORY_EMOJI[cat]||'🍽️'}</span>
-          <span style="font-family:'Playfair Display',serif;font-size:15px;font-weight:600">${cat}</span>
-          <span style="font-size:11px;color:var(--text-muted);background:var(--card);padding:1px 7px;border-radius:8px">${byCategory[cat].length}</span>
-        </div>`;
+      h += `<div class="pending-subcat">
+        <span style="font-size:15px">${CATEGORY_EMOJI[cat]||'🍽️'}</span>
+        <span class="pending-subcat-name">${cat}</span>
+        <span class="pending-subcat-count">${byCategory[cat].length}</span>
+      </div>`;
       for (const r of byCategory[cat]) {
-        h += `<div class="restaurant-card state-none" onclick="openModal('${r.id}')">
+        h += `<div class="restaurant-card ${cardState(r)}" onclick="openModal('${r.id}')">
           <span class="card-emoji">${r.emoji}</span>
           <div class="card-body">
             <div class="card-name">${r.name}</div>
@@ -781,22 +811,44 @@ function renderPending() {
           </div>
         </div>`;
       }
-      h += `</div>`;
     }
     return h;
   }
 
+  const isNeitherOpen = openPendingSections.has('neither');
+  const isOtherOpen = openPendingSections.has('other');
+
   let html = `<div class="pending-hero">
     <div class="pending-hero-emoji">🗺️</div>
     <div class="pending-hero-title">¿Dónde podemos comer?</div>
-    <div class="pending-hero-sub">${neitherVisited.length} sitios por descubrir juntos · ${onlyCurrentVisited.length} que ${otherName} no conoce aún</div>
+    <div class="pending-hero-sub">${neitherVisited.length} por descubrir juntos · ${onlyCurrentVisited.length} que ${otherName} no conoce aún</div>
   </div>`;
 
-  html += `<div class="pending-section-title">🌟 Por descubrir <span class="pending-section-sub">${neitherVisited.length} sitios</span></div>`;
-  html += buildCardList(neitherVisited);
+  // Accordion 1: Por descubrir
+  html += `<div class="pending-accordion">
+    <div class="pending-acc-header${isNeitherOpen?' open':''}" onclick="togglePendingSection('neither')">
+      <span style="font-size:18px">🌟</span>
+      <span class="pending-acc-title">Por descubrir</span>
+      <span class="pending-acc-count">${neitherVisited.length} sitios</span>
+      <span class="pending-acc-chevron">▼</span>
+    </div>
+    <div class="pending-acc-body${isNeitherOpen?' open':''}">
+      ${buildAccordionBody(neitherVisited)}
+    </div>
+  </div>`;
 
-  html += `<div class="pending-section-title">👤 ${otherName} no ha ido <span class="pending-section-sub">${onlyCurrentVisited.length} sitios</span></div>`;
-  html += buildCardList(onlyCurrentVisited);
+  // Accordion 2: Other hasn't been
+  html += `<div class="pending-accordion">
+    <div class="pending-acc-header${isOtherOpen?' open':''}" onclick="togglePendingSection('other')">
+      <span style="font-size:18px">👤</span>
+      <span class="pending-acc-title">${otherName} no ha ido</span>
+      <span class="pending-acc-count">${onlyCurrentVisited.length} sitios</span>
+      <span class="pending-acc-chevron">▼</span>
+    </div>
+    <div class="pending-acc-body${isOtherOpen?' open':''}">
+      ${buildAccordionBody(onlyCurrentVisited)}
+    </div>
+  </div>`;
 
   container.innerHTML = html;
 }
@@ -857,9 +909,8 @@ async function markVisit(id, who, date) {
   if (!r) return;
   if (who === 'alejandro') { r.visitedAlejandro = true; r.dateAlejandro = date; }
   if (who === 'alba') { r.visitedAlba = true; r.dateAlba = date; }
-  // Update UI immediately (optimistic)
-  renderList();
-  renderPending();
+  // Update all UI immediately (optimistic)
+  renderAll();
   openModal(id);
   showToast('¡Marcado! 🎉');
   // Save in background
@@ -877,8 +928,7 @@ async function addRestaurant() {
   restaurants.push({ id, name, category, emoji, location,
     visitedAlba: false, visitedAlejandro: false, dateAlba: '', dateAlejandro: '' });
   await saveData();
-  renderList();
-  renderPending();
+  renderAll();
   document.getElementById('addName').value = '';
   document.getElementById('addLocation').value = '';
   showToast('¡Restaurante añadido! 🍽️');
